@@ -14,10 +14,9 @@ import 'services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicialización de Supabase con la nueva publishableKey
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabasePublishableKey,
+    anonKey: SupabaseConfig.supabaseAnonKey,
   );
 
   runApp(
