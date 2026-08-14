@@ -5,18 +5,21 @@ import 'package:ar_flutter_plugin_2/managers/ar_location_manager.dart';
 import '../models/scanner_mode.dart';
 import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
+import 'ar_stability_filter.dart';
 
 /// Adapter que envuelve ar_flutter_plugin_2 (ARCore/ARKit).
+/// Incluye filtro de estabilidad para reducir ruido de captura.
 class ArScannerAdapter extends ScannerAdapter {
   ARSessionManager? _sessionManager;
   ARObjectManager? _objectManager;
   bool _isInitialized = false;
+  final ARStabilityFilter _filter = ARStabilityFilter(alpha: 0.15);
 
   @override
   ScannerMode get mode => ScannerMode.ar;
 
   @override
-  bool get isAvailable => true; // Se asume validado previamente
+  bool get isAvailable => true;
 
   @override
   bool get isTracking => _sessionManager != null && _isInitialized;
@@ -44,7 +47,7 @@ class ArScannerAdapter extends ScannerAdapter {
 
   @override
   Future<void> initialize() async {
-    // La inicialización real ocurre en onARViewCreated cuando el widget ARView monta.
+    _filter.reset();
     _isInitialized = false;
   }
 
@@ -56,10 +59,13 @@ class ArScannerAdapter extends ScannerAdapter {
     if (pose == null) return null;
 
     final t = pose.getTranslation();
+    final raw = ARPoint(x: t.x, y: t.y, z: t.z, source: PointSource.ar);
+    final smoothed = _filter.filter(raw);
+
     return ScannerPoint(
-      x: t.x,
-      y: t.y,
-      z: t.z,
+      x: smoothed.x,
+      y: smoothed.y,
+      z: smoothed.z,
       accuracy: 0.02,
       source: PointSource.ar,
     );
