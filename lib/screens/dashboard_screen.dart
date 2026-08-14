@@ -4,10 +4,8 @@ import '../models/isar_models.dart';
 import '../providers/project_provider.dart';
 import '../providers/floor_plan_provider.dart';
 import '../providers/scanner_provider.dart';
-import '../scanner/models/scanner_mode.dart';
 import '../services/scanner_capabilities_service.dart';
 import '../services/auth_service.dart';
-import '../services/ar_check_service.dart';
 import 'scan_screen.dart';
 import 'floor_plan_viewer_screen.dart';
 import 'login_screen.dart';
@@ -104,7 +102,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!ctx.mounted) return;
 
     if (caps.supportsAR) {
-      // Dispositivo con AR: ir directo
       Navigator.push(
         ctx,
         MaterialPageRoute(
@@ -114,7 +111,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    // Sin AR: mostrar selector de modo
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
@@ -130,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Escáner no disponible',
+                  'Escáner AR no disponible',
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
