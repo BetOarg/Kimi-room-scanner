@@ -4,10 +4,8 @@ import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
 
 /// Adapter para dibujo manual 2D.
-/// El usuario indica distancia y ángulo relativo desde la última esquina.
 class ManualScannerAdapter extends ScannerAdapter {
   final List<ScannerPoint> _points = [];
-  double _lastAngle = 0.0;
 
   @override
   ScannerMode get mode => ScannerMode.manual;
@@ -28,9 +26,6 @@ class ManualScannerAdapter extends ScannerAdapter {
   Future<ScannerPoint?> capturePoint() async => null;
 
   /// Agrega un vértice relativo al último punto conocido.
-  /// [distance] en metros.
-  /// [angleDeg] ángulo en grados respecto al eje +X (0° = derecha, 90° = arriba).
-  /// [height] altura Y (normalmente 0 para plano de planta).
   ScannerPoint addVertex(double distance, double angleDeg, {double height = 0.0}) {
     final angleRad = angleDeg * (pi / 180.0);
 
@@ -50,7 +45,6 @@ class ManualScannerAdapter extends ScannerAdapter {
     );
 
     _points.add(point);
-    _lastAngle = angleDeg;
     return point;
   }
 
