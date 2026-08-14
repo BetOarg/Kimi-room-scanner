@@ -4,6 +4,7 @@ import '../models/isar_models.dart';
 import '../providers/project_provider.dart';
 import '../providers/floor_plan_provider.dart';
 import '../providers/scanner_provider.dart';
+import '../scanner/models/scanner_mode.dart';
 import '../services/scanner_capabilities_service.dart';
 import '../services/auth_service.dart';
 import 'scan_screen.dart';
@@ -98,20 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _openScanner(BuildContext ctx, String uuid, String name) async {
     final caps = await ScannerCapabilitiesService.detect();
-
     if (!ctx.mounted) return;
 
-    if (caps.supportsAR) {
-      Navigator.push(
-        ctx,
-        MaterialPageRoute(
-          builder: (_) => ScanScreen(projectUuid: uuid, projectName: name),
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
+    final selectedMode = await showModalBottomSheet<ScannerMode>(
       context: ctx,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -126,53 +116,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Escáner AR no disponible',
+                  'Seleccionar modo de escaneo',
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Este dispositivo no soporta ARCore/ARKit. Selecciona una alternativa:',
-                  style: TextStyle(color: Colors.white70),
+                Text(
+                  'Recomendado: ${caps.recommendedMode.name.toUpperCase()}',
+                  style: const TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 20),
+                if (caps.supportsAR)
+                  ListTile(
+                    leading: const Icon(Icons.view_in_ar, color: Colors.purpleAccent),
+                    title: const Text('Realidad Aumentada'),
+                    subtitle: const Text('Mayor precisión. Requiere ARCore/ARKit.'),
+                    onTap: () => Navigator.pop(sheetCtx, ScannerMode.ar),
+                  ),
                 if (caps.supportsBasic)
                   ListTile(
                     leading: const Icon(Icons.camera_alt, color: Colors.blueAccent),
                     title: const Text('Cámara + Sensores'),
-                    subtitle: const Text(
-                      'Usa el giroscopio. Debes ingresar la distancia a cada esquina.',
-                    ),
-                    onTap: () {
-                      Navigator.pop(sheetCtx);
-                      Navigator.push(
-                        ctx,
-                        MaterialPageRoute(
-                          builder: (_) => ScanScreen(
-                            projectUuid: uuid,
-                            projectName: name,
-                          ),
-                        ),
-                      );
-                    },
+                    subtitle: const Text('Usa giroscopio. Ingresa distancias manualmente.'),
+                    onTap: () => Navigator.pop(sheetCtx, ScannerMode.basic),
                   ),
                 ListTile(
                   leading: const Icon(Icons.edit, color: Colors.greenAccent),
                   title: const Text('Dibujo Manual 2D'),
-                  subtitle: const Text(
-                    'Crea el plano tocando la pantalla o ingresando medidas.',
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetCtx);
-                    Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => ScanScreen(
-                          projectUuid: uuid,
-                          projectName: name,
-                        ),
-                      ),
-                    );
-                  },
+                  subtitle: const Text('Crea el plano tocando la pantalla o ingresando medidas.'),
+                  onTap: () => Navigator.pop(sheetCtx, ScannerMode.manual),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -180,6 +151,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
+    );
+
+    if (selectedMode == null || !ctx.mounted) return;
+
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => ScanScreen(
+          projectUuid: uuid,
+          projectName: name,
+          forcedMode: selectedMode,
+        ),
+      ),
     );
   }
 
@@ -222,112 +206,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 2,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Cerrar Sesión',
-            onPressed: _handleSignOut,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            color: theme.colorScheme.surfaceContainerHighest,
-            child: Row(
-              children: [
-                Icon(
-                  user != null ? Icons.cloud_done : Icons.cloud_off,
-                  color: user != null ? Colors.green : Colors.orangeAccent,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    user != null
-                        ? 'Sincronizado: ${user.email}'
-                        : 'Modo Offline (Proyectos guardados localmente)',
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.projects.isEmpty
-                    ? _buildEmptyState()
-                    : _buildProjectList(provider),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showNewProjectDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo Escaneo'),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.architecture_rounded, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No tienes proyectos guardados',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          const Text('Presiona "Nuevo Escaneo" para comenzar'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectList(ProjectProvider provider) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.projects.length,
-      itemBuilder: (context, index) {
-        final project = provider.projects[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: const CircleAvatar(
-              child: Icon(Icons.meeting_room),
-            ),
-            title: Text(
-              project.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'Actualizado: ${project.updatedAt.day}/${project.updatedAt.month}/${project.updatedAt.year}',
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.map_outlined),
-                  tooltip: 'Ver plano',
-                  onPressed: () => _viewFloorPlan(project),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Eliminar',
-                  onPressed: () async {
-                    await provider.deleteProject(project.uuid);
-                  },
-                ),
-              ],
-            ),
-            onTap: () => _openProject(project),
-          ),
-        );
-      },
-    );
-  }
-}
+            icon
