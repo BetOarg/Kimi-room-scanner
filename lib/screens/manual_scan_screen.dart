@@ -42,9 +42,8 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
 
   void _onCanvasTap(TapDownDetails details, Size canvasSize) {
     final local = details.localPosition;
-    const scale = 0.01;
     final center = Offset(canvasSize.width / 2, canvasSize.height / 2);
-    final meterPos = (local - center) * scale;
+    final meterPos = local - center;
 
     final provider = context.read<ScannerProvider>();
 
@@ -68,7 +67,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
           : FeatureType.window;
       provider.addFeatureToCurrentRoom(
         featureType,
-        ARPoint(x: meterPos.dx, y: 0, z: meterPos.dy, source: PointSource.manual),
+        ARPoint(x: meterPos.dx * _adapter.scale, y: 0, z: meterPos.dy * _adapter.scale, source: PointSource.manual),
       );
       HapticFeedback.lightImpact();
       final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
@@ -246,12 +245,37 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
                       }).toList(),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  // Selector de escala
+                  Row(
+                    children: [
+                      const Text(
+                        'Escala:',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _adapter.scale,
+                          min: 0.001,
+                          max: 0.05,
+                          divisions: 49,
+                          label: '${(_adapter.scale * 1000).toStringAsFixed(1)} mm/px',
+                          onChanged: (value) {
+                            setState(() => _adapter.scale = value);
+                          },
+                        ),
+                      ),
+                      Text(
+                        '${(_adapter.scale * 100).toStringAsFixed(1)} cm/px',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
                   Text(
                     'Esquinas: ${provider.currentPointsCount}',
                     style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -287,7 +311,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   const Text(
                     'O toca directamente en el canvas para colocar puntos.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
