@@ -35,6 +35,7 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
   AppMode _currentMode = AppMode.wall;
   Timer? _yawTimer;
   double _displayYaw = 0.0;
+  bool _showCalibrationDialog = true;
 
   @override
   void initState() {
@@ -53,7 +54,68 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
     super.dispose();
   }
 
+  void _showCalibrationSheet() {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Calibración de distancia',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Parate en una esquina y apunta la cámara hacia la siguiente pared. '
+                  'Ingresá la distancia real en metros:',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _distanceCtrl,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Distancia a la pared (metros)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final dist = double.tryParse(_distanceCtrl.text);
+                      if (dist != null && dist > 0) {
+                        _adapter.setCalibrationDistance(dist);
+                        Navigator.pop(ctx);
+                        setState(() => _showCalibrationDialog = false);
+                      }
+                    },
+                    child: const Text('CONFIRMAR Y COMENZAR'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _onCapture() async {
+    if (_showCalibrationDialog) {
+      _showCalibrationSheet();
+      return;
+    }
+
     final dist = double.tryParse(_distanceCtrl.text);
     if (dist == null || dist <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,6 +243,13 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
     final provider = context.watch<ScannerProvider>();
     final camera = _adapter.camera;
     final yawDeg = (_displayYaw * 180 / pi).toStringAsFixed(1);
+
+    // Mostrar diálogo de calibración al inicio
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_showCalibrationDialog && mounted) {
+        _showCalibrationSheet();
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.black,
