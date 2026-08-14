@@ -7,8 +7,6 @@ import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
 
 /// Adapter "Basic": cámara + giroscopio para dispositivos sin ARCore.
-/// Estrategia: el usuario apunta, presiona captura, y la app proyecta
-/// usando la orientación del giroscopio + una distancia ingresada o estimada.
 class BasicScannerAdapter extends ScannerAdapter {
   CameraController? _camera;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
@@ -18,7 +16,7 @@ class BasicScannerAdapter extends ScannerAdapter {
   DateTime? _lastGyroTime;
 
   ScannerPoint? _lastPoint;
-  double? _calibrationDistance; // Distancia de referencia en metros
+  double? _calibrationDistance;
 
   @override
   ScannerMode get mode => ScannerMode.basic;
@@ -47,7 +45,7 @@ class BasicScannerAdapter extends ScannerAdapter {
     await _camera!.initialize();
 
     _lastGyroTime = DateTime.now();
-    _gyroSub = gyroscopeEvents.listen((event) {
+    _gyroSub = gyroscopeEventStream().listen((event) {
       final now = DateTime.now();
       if (_lastGyroTime == null) {
         _lastGyroTime = now;
@@ -56,24 +54,26 @@ class BasicScannerAdapter extends ScannerAdapter {
       final dt = now.difference(_lastGyroTime!).inMilliseconds / 1000.0;
       _lastGyroTime = now;
 
-      // Integración simple del yaw (eje Z del giroscopio)
-      // En la práctica, el eje depende de la orientación del dispositivo.
       _yaw += event.z * dt;
     });
   }
 
-  /// Establece la distancia de referencia (metros) antes de capturar.
   void setCalibrationDistance(double meters) {
     _calibrationDistance = meters;
   }
 
   @override
   Future<ScannerPoint?> capturePoint() async {
-    if (!_camera!.value.isInitialized) return null;
+    if (_camera == null || !_camera!.value.isInitialized) return null;
 
-    // Primer punto = origen
     if (_lastPoint == null) {
-      const origin = ScannerPoint(x: 0, y: 0, z: 0, accuracy: 0.1, source: PointSource.camera);
+      const origin = ScannerPoint(
+        x: 0,
+        y: 0,
+        z: 0,
+        accuracy: 0.1,
+        source: PointSource.camera,
+      );
       _lastPoint = origin;
       return origin;
     }
