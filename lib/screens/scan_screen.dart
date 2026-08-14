@@ -21,11 +21,13 @@ import 'basic_scan_screen.dart';
 class ScanScreen extends StatefulWidget {
   final String projectUuid;
   final String projectName;
+  final ScannerMode? forcedMode;
 
   const ScanScreen({
     super.key,
     required this.projectUuid,
     required this.projectName,
+    this.forcedMode,
   });
 
   @override
@@ -58,8 +60,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
       _caps = await ScannerCapabilitiesService.detect();
 
+      final mode = widget.forcedMode ?? _caps!.recommendedMode;
+
       ScannerAdapter adapter;
-      switch (_caps!.recommendedMode) {
+      switch (mode) {
         case ScannerMode.ar:
           adapter = ArScannerAdapter();
           break;
@@ -109,7 +113,7 @@ class _ScanScreenState extends State<ScanScreen> {
     }
 
     final provider = context.read<ScannerProvider>();
-    final result = provider.tryAddPoint(point.x, point.y, point.z);
+    final result = provider.tryAddPoint(point);
 
     if (!result.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
