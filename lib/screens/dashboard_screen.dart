@@ -6,7 +6,6 @@ import '../providers/floor_plan_provider.dart';
 import '../providers/scanner_provider.dart';
 import '../scanner/models/scanner_mode.dart';
 import '../services/scanner_capabilities_service.dart';
-import '../services/scanner_preferences_service.dart';
 import '../services/auth_service.dart';
 import 'scan_screen.dart';
 import 'floor_plan_viewer_screen.dart';
@@ -100,7 +99,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _openScanner(BuildContext ctx, String uuid, String name) async {
     final caps = await ScannerCapabilitiesService.detect();
-    final savedMode = await ScannerPreferencesService.getLastMode();
     if (!ctx.mounted) return;
 
     final selectedMode = await showModalBottomSheet<ScannerMode>(
@@ -126,23 +124,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'Recomendado: ${caps.recommendedMode.name.toUpperCase()}',
                   style: const TextStyle(color: Colors.white70),
                 ),
-                if (savedMode != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Último usado: ${savedMode.name.toUpperCase()}',
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
-                    ),
-                  ),
                 const SizedBox(height: 20),
                 if (caps.supportsAR)
                   ListTile(
                     leading: const Icon(Icons.view_in_ar, color: Colors.purpleAccent),
                     title: const Text('Realidad Aumentada'),
                     subtitle: const Text('Mayor precisión. Requiere ARCore/ARKit.'),
-                    trailing: savedMode == ScannerMode.ar
-                        ? const Icon(Icons.history, color: Colors.white38, size: 18)
-                        : null,
                     onTap: () => Navigator.pop(sheetCtx, ScannerMode.ar),
                   ),
                 if (caps.supportsBasic)
@@ -150,18 +137,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     leading: const Icon(Icons.camera_alt, color: Colors.blueAccent),
                     title: const Text('Cámara + Sensores'),
                     subtitle: const Text('Usa giroscopio. Ingresa distancias manualmente.'),
-                    trailing: savedMode == ScannerMode.basic
-                        ? const Icon(Icons.history, color: Colors.white38, size: 18)
-                        : null,
                     onTap: () => Navigator.pop(sheetCtx, ScannerMode.basic),
                   ),
                 ListTile(
                   leading: const Icon(Icons.edit, color: Colors.greenAccent),
                   title: const Text('Dibujo Manual 2D'),
                   subtitle: const Text('Crea el plano tocando la pantalla o ingresando medidas.'),
-                  trailing: savedMode == ScannerMode.manual
-                      ? const Icon(Icons.history, color: Colors.white38, size: 18)
-                      : null,
                   onTap: () => Navigator.pop(sheetCtx, ScannerMode.manual),
                 ),
                 const SizedBox(height: 12),
@@ -173,8 +154,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     if (selectedMode == null || !ctx.mounted) return;
-
-    await ScannerPreferencesService.setLastMode(selectedMode);
 
     Navigator.push(
       ctx,
