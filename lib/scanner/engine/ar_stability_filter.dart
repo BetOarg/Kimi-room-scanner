@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../../models/room_model.dart';
 
 /// Filtro de suavizado exponencial (EMA) para posiciones AR.
