@@ -1,3 +1,5 @@
+import 'scanner_mode.dart';
+
 /// Capacidades físicas/software relevantes para Scanner Engine.
 class ScannerCapabilities {
   final bool hasCamera;
@@ -5,7 +7,6 @@ class ScannerCapabilities {
   final bool hasArKit;
   final bool hasGyroscope;
   final bool hasAccelerometer;
-  final bool hasMagnetometer;
 
   const ScannerCapabilities({
     this.hasCamera = false,
@@ -13,22 +14,22 @@ class ScannerCapabilities {
     this.hasArKit = false,
     this.hasGyroscope = false,
     this.hasAccelerometer = false,
-    this.hasMagnetometer = false,
   });
 
   /// El dispositivo puede utilizar algún motor AR.
   bool get supportsAR => hasArCore || hasArKit;
 
-  /// El dispositivo puede utilizar el scanner básico.
-  bool get supportsBasicScanner => hasCamera;
+  /// El dispositivo puede utilizar el scanner básico (cámara + sensores).
+  bool get supportsBasic => hasCamera && (hasGyroscope || hasAccelerometer);
 
-  /// Nivel máximo recomendado.
-  ///
-  /// AR > BASIC > MANUAL.
-  String get recommendedMode {
-    if (supportsAR) return 'ar';
-    if (supportsBasicScanner) return 'basic';
-    return 'manual';
+  /// Siempre disponible: dibujo manual.
+  bool get supportsManual => true;
+
+  /// Modo recomendado según hardware.
+  ScannerMode get recommendedMode {
+    if (supportsAR) return ScannerMode.ar;
+    if (supportsBasic) return ScannerMode.basic;
+    return ScannerMode.manual;
   }
 
   @override
@@ -38,8 +39,7 @@ class ScannerCapabilities {
         'arCore: $hasArCore, '
         'arKit: $hasArKit, '
         'gyro: $hasGyroscope, '
-        'accelerometer: $hasAccelerometer, '
-        'magnetometer: $hasMagnetometer'
-        ')';
+        'accel: $hasAccelerometer, '
+        'recommended: ${recommendedMode.name})';
   }
 }
