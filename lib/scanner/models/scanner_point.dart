@@ -1,29 +1,11 @@
 import '../../models/room_model.dart';
 
-/// Origen del punto capturado por Scanner Engine.
-enum PointSource {
-  ar,
-  camera,
-  manual,
-  imported,
-}
-
 /// Punto normalizado del Scanner Engine.
-///
-/// Este modelo NO reemplaza todavía a [ARPoint].
-/// Su función es desacoplar el motor de captura de ARCore/ARKit.
 class ScannerPoint {
   final double x;
   final double y;
   final double z;
-
-  /// Precisión estimada del punto en metros.
-  ///
-  /// Ejemplo:
-  /// 0.01 = aproximadamente 1 cm
-  /// 0.05 = aproximadamente 5 cm
   final double accuracy;
-
   final PointSource source;
 
   const ScannerPoint({
@@ -34,13 +16,13 @@ class ScannerPoint {
     this.source = PointSource.manual,
   });
 
-  /// Convierte el punto del Engine al modelo actualmente utilizado
-  /// por RoomModel/ScannerProvider.
+  /// Convierte al modelo de dominio preservando el origen.
   ARPoint toARPoint() {
     return ARPoint(
       x: x,
       y: y,
       z: z,
+      source: source,
     );
   }
 
@@ -53,7 +35,7 @@ class ScannerPoint {
       y: point.y,
       z: point.z,
       accuracy: accuracy,
-      source: PointSource.ar,
+      source: point.source ?? PointSource.ar,
     );
   }
 
@@ -83,7 +65,7 @@ class ScannerPoint {
     };
   }
 
-  factory ScannerPoint.fromJson(Map<String, dynamic> json) {
+  factory ScannerPoint.fromJson(Map json) {
     return ScannerPoint(
       x: (json['x'] as num).toDouble(),
       y: (json['y'] as num).toDouble(),
