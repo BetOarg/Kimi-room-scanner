@@ -6,12 +6,10 @@ import '../models/scanner_mode.dart';
 import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
 
-/// Adapter "Basic": cámara + giroscopio para dispositivos sin ARCore.
 class BasicScannerAdapter extends ScannerAdapter {
   CameraController? _camera;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
 
-  // Orientación acumulada (yaw en radianes, plano XZ)
   double _yaw = 0.0;
   DateTime? _lastGyroTime;
 
@@ -28,6 +26,9 @@ class BasicScannerAdapter extends ScannerAdapter {
   bool get isTracking => _camera?.value.isInitialized ?? false;
 
   CameraController? get camera => _camera;
+
+  /// Yaw actual en radianes (solo lectura).
+  double get yaw => _yaw;
 
   @override
   Future<void> initialize() async {
@@ -53,13 +54,22 @@ class BasicScannerAdapter extends ScannerAdapter {
       }
       final dt = now.difference(_lastGyroTime!).inMilliseconds / 1000.0;
       _lastGyroTime = now;
-
       _yaw += event.z * dt;
     });
   }
 
   void setCalibrationDistance(double meters) {
     _calibrationDistance = meters;
+  }
+
+  /// Resetea el yaw a cero (útil cuando el usuario se realinea físicamente).
+  void resetYaw() {
+    _yaw = 0.0;
+  }
+
+  /// Aplica una corrección manual al yaw en grados.
+  void correctYaw(double deltaDegrees) {
+    _yaw += deltaDegrees * (pi / 180.0);
   }
 
   @override
