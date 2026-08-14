@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,11 +33,24 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
   late final BasicScannerAdapter _adapter;
   final TextEditingController _distanceCtrl = TextEditingController(text: '2.5');
   AppMode _currentMode = AppMode.wall;
+  Timer? _yawTimer;
+  double _displayYaw = 0.0;
 
   @override
   void initState() {
     super.initState();
     _adapter = widget.engine.adapter as BasicScannerAdapter;
+    _yawTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (mounted) {
+        setState(() => _displayYaw = _adapter.yaw);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _yawTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _onCapture() async {
@@ -69,7 +84,7 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
     final provider = context.read<ScannerProvider>();
 
     if (_currentMode == AppMode.wall) {
-      final result = provider.tryAddPoint(point.x, point.y, point.z);
+      final result = provider.tryAddPoint(point);
       if (!result.isValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -93,7 +108,7 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
           : FeatureType.window;
       provider.addFeatureToCurrentRoom(
         featureType,
-        ARPoint(x: point.x, y: point.y, z: point.z),
+        ARPoint(x: point.x, y: point.y, z: point.z, source: point.source),
       );
       final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,6 +180,7 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<ScannerProvider>();
     final camera = _adapter.camera;
+    final yawDeg = (_displayYaw * 180 / pi).toStringAsFixed(1);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -219,6 +235,52 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Corrección de yaw
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.rotate_left, color: Colors.white70),
+                        tooltip: '-5°',
+                        onPressed: () {
+                          _adapter.correctYaw(-5);
+                          setState(() => _displayYaw = _adapter.yaw);
+                        },
+                      ),
+                      Text(
+                        'Yaw: ${yawDeg}°',
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.rotate_right, color: Colors.white70),
+                        tooltip: '+5°',
+                        onPressed: () {
+                          _adapter.correctYaw(5);
+                          setState(() => _displayYaw = _adapter.yaw);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          _adapter.resetYaw();
+                          setState(() => _displayYaw = _adapter.yaw);
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('RESET'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.orangeAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
