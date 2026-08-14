@@ -1,4 +1,4 @@
-import 'scanner_mode.dart';
+import '../models/scanner_mode.dart';
 
 /// Capacidades físicas/software relevantes para Scanner Engine.
 class ScannerCapabilities {
