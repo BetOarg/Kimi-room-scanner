@@ -3,8 +3,6 @@ import '../models/scanner_mode.dart';
 import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
 
-/// Adapter para dibujo manual 2D.
-/// La escala es configurable (metros por pixel).
 class ManualScannerAdapter extends ScannerAdapter {
   final List<ScannerPoint> _points = [];
   double _scale = 0.01; // default: 100 px = 1 m
@@ -34,10 +32,8 @@ class ManualScannerAdapter extends ScannerAdapter {
   @override
   Future<ScannerPoint?> capturePoint() async => null;
 
-  /// Agrega un vértice relativo al último punto conocido.
   ScannerPoint addVertex(double distance, double angleDeg, {double height = 0.0}) {
     final angleRad = angleDeg * (pi / 180.0);
-
     final last = _points.isEmpty
         ? const ScannerPoint(x: 0, y: 0, z: 0)
         : _points.last;
@@ -52,13 +48,11 @@ class ManualScannerAdapter extends ScannerAdapter {
       accuracy: 0.05,
       source: PointSource.manual,
     );
-
     _points.add(point);
     return point;
   }
 
   /// Inserta un punto absoluto usando la escala actual.
-  /// [screenX] y [screenY] son coordenadas de pantalla relativas al centro.
   ScannerPoint addAbsolutePoint(double screenX, double screenY, {double height = 0.0}) {
     final x = screenX * _scale;
     final z = screenY * _scale;
