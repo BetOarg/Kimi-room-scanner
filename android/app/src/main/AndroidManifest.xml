@@ -1,13 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permisos -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Features: todas opcionales para que la app se instale en cualquier celular -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.ar" android:required="false" tools:replace="android:required" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    
+    <!-- NUEVAS: sensores para modo Basic (opcionales, no bloquean instalación) -->
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
 
     <application
         android:label="room_scanner_ar"
@@ -16,6 +23,7 @@
         android:theme="@style/LaunchTheme"
         tools:replace="android:theme">
 
+        <!-- ARCore opcional: clave para que la app funcione en celulares sin AR -->
         <meta-data
             android:name="com.google.ar.core"
             android:value="optional"
