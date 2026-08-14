@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:ar_flutter_plugin_2/ar_flutter_plugin.dart';
+import 'package:ar_flutter_plugin_2/datatypes/config_planedetection.dart';
 import '../models/room_model.dart';
 import '../providers/scanner_provider.dart';
 import '../providers/floor_plan_provider.dart';
@@ -190,7 +192,6 @@ class _ScanScreenState extends State<ScanScreen> {
       );
     }
 
-    // Delegar a la sub-pantalla según el modo
     final mode = _engine.mode;
     switch (mode) {
       case ScannerMode.ar:
@@ -216,20 +217,18 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  // Pantalla AR: reutiliza la lógica actual adaptada al ArScannerAdapter
   Widget _buildARScreen() {
     final provider = context.watch<ScannerProvider>();
+    final arAdapter = _engine.adapter as ArScannerAdapter;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ARView se monta aquí y conecta al adapter
-          // Nota: requiere importar ar_flutter_plugin_2 y conectar onARViewCreated
-          // al adapter interno. Esto se hace vía un widget intermedio o
-          // directamente en esta pantalla si se prefiere.
-          // Para mantener este archivo enfocado, asumimos que hay un
-          // ArViewport widget o se integra directamente.
+          ARView(
+            onARViewCreated: arAdapter.onARViewCreated,
+            planeDetectionConfig: PlaneDetectionConfig.horizontalAndVertical,
+          ),
           Center(
             child: Container(
               width: 14,
