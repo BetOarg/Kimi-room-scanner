@@ -13,27 +13,23 @@ class FloorPlanViewerScreen extends StatefulWidget {
 }
 
 class _FloorPlanViewerScreenState extends State<FloorPlanViewerScreen> {
-  // Solo conservamos minX y minZ para la transformación
   double _minX = 0.0;
   double _minZ = 0.0;
   double _scale = 1.0;
   double _padding = 20.0;
 
-  // Convierte coordenadas del plano a pantalla
   Offset _transformPoint(ARPoint p) {
     final x = _padding + (p.x - _minX) * _scale;
     final z = _padding + (p.z - _minZ) * _scale;
     return Offset(x, z);
   }
 
-  // Convierte coordenadas de pantalla a plano (inversa)
   ARPoint _inverseTransform(Offset screenPos) {
     final x = (screenPos.dx - _padding) / _scale + _minX;
     final z = (screenPos.dy - _padding) / _scale + _minZ;
     return ARPoint(x: x, y: 0.0, z: z);
   }
 
-  // Calcula la escala y límites según las habitaciones cargadas
   void _calculateTransform(Size screenSize, List<RoomModel> rooms) {
     if (rooms.isEmpty) return;
 
@@ -60,7 +56,6 @@ class _FloorPlanViewerScreenState extends State<FloorPlanViewerScreen> {
         .clamp(0.0, (screenSize.height - 2 * _padding) / contentHeight);
   }
 
-  // Retorna el ID de la habitación tocada
   String? _getRoomAtPosition(ARPoint point, List<RoomModel> rooms) {
     for (var room in rooms) {
       if (GeometryService.isPointInPolygon(point, room.points)) {
@@ -326,7 +321,7 @@ class FloorPlanPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final roomFill = Paint()
-      ..color = Colors.blueAccent.withOpacity(0.1)
+      ..color = Colors.blueAccent.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final doorPaint = Paint()
