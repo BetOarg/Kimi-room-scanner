@@ -2,6 +2,7 @@ import 'package:ar_flutter_plugin_2/managers/ar_session_manager.dart';
 import 'package:ar_flutter_plugin_2/managers/ar_object_manager.dart';
 import 'package:ar_flutter_plugin_2/managers/ar_anchor_manager.dart';
 import 'package:ar_flutter_plugin_2/managers/ar_location_manager.dart';
+import '../../models/room_model.dart';
 import '../models/scanner_mode.dart';
 import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
