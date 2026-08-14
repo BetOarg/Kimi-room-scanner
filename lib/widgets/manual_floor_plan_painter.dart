@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Painter para el canvas de dibujo manual 2D.
@@ -64,14 +65,14 @@ class ManualFloorPlanPainter extends CustomPainter {
       canvas.drawLine(points.last, points.first, closePaint);
     }
 
-    // Puntos (esquinas)
+    // Puntos (esquinas) — drawPoints es la API correcta de Canvas
     final pointPaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
 
-    for (final p in points) {
-      canvas.drawPoint(PointMode.points, p, pointPaint);
+    if (points.isNotEmpty) {
+      canvas.drawPoints(PointMode.points, points, pointPaint);
     }
 
     // Punto activo (último)
@@ -80,7 +81,7 @@ class ManualFloorPlanPainter extends CustomPainter {
         ..color = Colors.orangeAccent
         ..strokeWidth = 12
         ..strokeCap = StrokeCap.round;
-      canvas.drawPoint(PointMode.points, points.last, activePaint);
+      canvas.drawPoints(PointMode.points, [points.last], activePaint);
     }
   }
 
