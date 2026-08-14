@@ -1,14 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../models/room_model.dart';
+import '../scanner/models/scanner_point.dart';
 import '../utils/scan_validator.dart';
 
-/// Estado de la sesión de escaneo activa (habitación en curso + habitaciones
-/// ya cerradas durante esta sesión de la app).
-///
-/// Este provider valida cada punto nuevo con [ScanValidator] antes de
-/// aceptarlo, evitando vértices duplicados, autointersecciones y polígonos
-/// degenerados en el momento de la captura (antes esta validación existía
-/// pero nunca se invocaba desde ningún flujo real de la app).
 class ScannerProvider extends ChangeNotifier {
   final List<RoomModel> _rooms = [];
   RoomModel? _currentRoom;
@@ -50,8 +44,6 @@ class ScannerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reemplaza el estado con habitaciones ya guardadas de un proyecto
-  /// existente (por ejemplo al reabrir un proyecto desde el dashboard).
   void loadRooms(List<RoomModel> rooms) {
     _rooms
       ..clear()
@@ -60,19 +52,13 @@ class ScannerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Intenta agregar un vértice de pared a la habitación actual.
-  ///
-  /// Corre la geometría a través de [ScanValidator] antes de aceptarlo:
-  /// rechaza puntos duplicados o demasiado cercanos al anterior, y detecta
-  /// autointersecciones con las paredes ya trazadas. Si el resultado es
-  /// inválido, el punto NO se agrega y el motivo queda en
-  /// [ValidationResult.errorMessage].
-  ValidationResult tryAddPoint(double x, double y, double z) {
+  /// Ahora acepta ScannerPoint para preservar el origen (AR, camera, manual).
+  ValidationResult tryAddPoint(ScannerPoint point) {
     if (_currentRoom == null) {
       startNewRoom();
     }
 
-    final candidate = ARPoint(x: x, y: y, z: z);
+    final candidate = point.toARPoint();
     final result = ScanValidator.validateNewPoint(candidate, _currentRoom!.points);
 
     if (!result.isValid) {
@@ -85,16 +71,6 @@ class ScannerProvider extends ChangeNotifier {
     return result;
   }
 
-  /// Agrega una puerta/ventana como [WallFeature] sobre la pared actual, en
-  /// lugar de insertarla como un vértice más del polígono (lo que antes
-  /// deformaba la forma de la habitación: cada puerta/ventana terminaba
-  /// contando como una esquina extra).
-  ///
-  /// [location] es el punto tocado/capturado en AR; el extremo del vano se
-  /// aproxima con un ancho fijo (0.8 m puerta, 1.0 m ventana) a lo largo del
-  /// eje X, igual que el resto de la app (ver [FloorPlanProvider]). Es una
-  /// simplificación de v1: la orientación real del vano sobre la pared
-  /// debería derivarse de la pared más cercana.
   void addFeatureToCurrentRoom(FeatureType type, ARPoint location) {
     if (_currentRoom == null) return;
 
@@ -120,10 +96,6 @@ class ScannerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Intenta cerrar la habitación actual, validando que el polígono tenga
-  /// área suficiente y no se autointersecte antes de aceptarla como
-  /// definitiva. Devuelve el [RoomModel] cerrado si tuvo éxito, o `null` si
-  /// falló (en cuyo caso [lastCloseError] describe el motivo).
   String? lastCloseError;
 
   RoomModel? closeCurrentRoom() {
