@@ -9,6 +9,8 @@ import '../scanner/engine/manual_scanner_adapter.dart';
 import '../widgets/manual_floor_plan_painter.dart';
 import 'floor_plan_viewer_screen.dart';
 
+enum AppMode { wall, door, window }
+
 class ManualScanScreen extends StatefulWidget {
   final ScannerEngine engine;
   final String projectUuid;
@@ -30,6 +32,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
   final List<Offset> _canvasPoints = [];
   final TextEditingController _distanceCtrl = TextEditingController();
   final TextEditingController _angleCtrl = TextEditingController();
+  AppMode _currentMode = AppMode.wall;
 
   @override
   void initState() {
@@ -39,20 +42,43 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
 
   void _onCanvasTap(TapDownDetails details, Size canvasSize) {
     final local = details.localPosition;
-    // Convertir coordenadas de pantalla a metros (escala: 100 px = 1 metro)
     const scale = 0.01;
     final center = Offset(canvasSize.width / 2, canvasSize.height / 2);
     final meterPos = (local - center) * scale;
 
-    final point = _adapter.addAbsolutePoint(meterPos.dx, meterPos.dy);
-    setState(() {
-      _canvasPoints.add(local);
-    });
-
-    HapticFeedback.lightImpact();
-
     final provider = context.read<ScannerProvider>();
-    provider.tryAddPoint(point.x, point.y, point.z);
+
+    if (_currentMode == AppMode.wall) {
+      final point = _adapter.addAbsolutePoint(meterPos.dx, meterPos.dy);
+      setState(() => _canvasPoints.add(local));
+      HapticFeedback.lightImpact();
+      provider.tryAddPoint(point.x, point.y, point.z);
+    } else {
+      if (provider.currentPointsCount < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Necesitas al menos 2 esquinas antes de agregar aberturas.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      final featureType = _currentMode == AppMode.door
+          ? FeatureType.door
+          : FeatureType.window;
+      provider.addFeatureToCurrentRoom(
+        featureType,
+        ARPoint(x: meterPos.dx, y: 0, z: meterPos.dy),
+      );
+      HapticFeedback.lightImpact();
+      final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$label marcada en el plano'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   void _onAddRelative() {
@@ -92,9 +118,40 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('¡Ambiente guardado!'), backgroundColor: Colors.green),
+      const SnackBar(
+        content: Text('¡Ambiente guardado!'),
+        backgroundColor: Colors.green,
+      ),
     );
     Navigator.pop(context);
+  }
+
+  Widget _buildModeChip(AppMode mode, IconData icon, String label) {
+    final isSelected = _currentMode == mode;
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: isSelected ? Colors.white : Colors.white70,
+      ),
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: mode == AppMode.wall
+          ? Colors.blueAccent
+          : mode == AppMode.door
+              ? Colors.redAccent
+              : Colors.blue.shade300,
+      backgroundColor: Colors.black87,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.white70,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (selected) {
+        if (!selected) return;
+        HapticFeedback.selectionClick();
+        setState(() => _currentMode = mode);
+      },
+    );
   }
 
   @override
@@ -118,7 +175,6 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
       ),
       body: Column(
         children: [
-          // Canvas interactivo
           Expanded(
             flex: 3,
             child: LayoutBuilder(
@@ -144,8 +200,6 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
               },
             ),
           ),
-
-          // Panel de controles
           Expanded(
             flex: 2,
             child: Container(
@@ -156,6 +210,45 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
               ),
               child: Column(
                 children: [
+                  // Selector de modo
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildModeChip(AppMode.wall, Icons.wallpaper, 'Pared'),
+                      const SizedBox(width: 8),
+                      _buildModeChip(AppMode.door, Icons.door_front_door, 'Puerta'),
+                      const SizedBox(width: 8),
+                      _buildModeChip(AppMode.window, Icons.window, 'Ventana'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Selector de tipo de habitación
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: RoomType.values.map((type) {
+                        final isSelected = provider.selectedType == type;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ChoiceChip(
+                            label: Text(type.name.toUpperCase()),
+                            selected: isSelected,
+                            selectedColor: Colors.blueAccent,
+                            backgroundColor: Colors.black87,
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            onSelected: (_) {
+                              HapticFeedback.selectionClick();
+                              provider.setRoomType(type);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'Esquinas: ${provider.currentPointsCount}',
                     style: const TextStyle(color: Colors.white70, fontSize: 16),
@@ -196,7 +289,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const Text(
                     'O toca directamente en el canvas para colocar puntos.',
                     style: TextStyle(color: Colors.white38, fontSize: 12),
