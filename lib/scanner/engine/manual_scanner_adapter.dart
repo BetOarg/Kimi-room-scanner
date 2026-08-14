@@ -4,8 +4,10 @@ import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
 
 /// Adapter para dibujo manual 2D.
+/// La escala es configurable (metros por pixel).
 class ManualScannerAdapter extends ScannerAdapter {
   final List<ScannerPoint> _points = [];
+  double _scale = 0.01; // default: 100 px = 1 m
 
   @override
   ScannerMode get mode => ScannerMode.manual;
@@ -15,6 +17,13 @@ class ManualScannerAdapter extends ScannerAdapter {
 
   @override
   bool get isTracking => true;
+
+  /// Metros por pixel. Ej: 0.01 = 1 metro cada 100 px.
+  double get scale => _scale;
+
+  set scale(double value) {
+    if (value > 0) _scale = value;
+  }
 
   @override
   Future<void> initialize() async {}
@@ -48,11 +57,15 @@ class ManualScannerAdapter extends ScannerAdapter {
     return point;
   }
 
-  /// Inserta un punto absoluto (usado por el canvas táctil 2D).
-  ScannerPoint addAbsolutePoint(double x, double z, {double y = 0.0}) {
+  /// Inserta un punto absoluto usando la escala actual.
+  /// [screenX] y [screenY] son coordenadas de pantalla relativas al centro.
+  ScannerPoint addAbsolutePoint(double screenX, double screenY, {double height = 0.0}) {
+    final x = screenX * _scale;
+    final z = screenY * _scale;
+
     final point = ScannerPoint(
       x: x,
-      y: y,
+      y: height,
       z: z,
       accuracy: 0.03,
       source: PointSource.manual,
