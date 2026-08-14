@@ -3,28 +3,44 @@ import 'package:vector_math/vector_math_64.dart' as vector;
 enum RoomType { living, cocina, bano, dormitorio, lavadero, pasillo }
 enum FeatureType { door, window }
 
+/// Origen del punto capturado.
+enum PointSource { ar, camera, manual, imported }
+
 /// Punto en el espacio 3D (x, y, z) – sin timestamp para simplificar
 class ARPoint {
   final double x;
   final double y;
   final double z;
+  final PointSource? source;
 
-  ARPoint({required this.x, required this.y, required this.z});
+  ARPoint({
+    required this.x,
+    required this.y,
+    required this.z,
+    this.source,
+  });
 
-  factory ARPoint.fromVector3(vector.Vector3 v) {
-    return ARPoint(x: v.x, y: v.y, z: v.z);
+  factory ARPoint.fromVector3(vector.Vector3 v, {PointSource? source}) {
+    return ARPoint(x: v.x, y: v.y, z: v.z, source: source);
   }
 
   Map<String, dynamic> toJson() => {
         'x': x,
         'y': y,
         'z': z,
+        if (source != null) 'source': source!.name,
       };
 
-  factory ARPoint.fromJson(Map<String, dynamic> json) => ARPoint(
+  factory ARPoint.fromJson(Map json) => ARPoint(
         x: (json['x'] as num).toDouble(),
         y: (json['y'] as num).toDouble(),
         z: (json['z'] as num).toDouble(),
+        source: json['source'] != null
+            ? PointSource.values.firstWhere(
+                (e) => e.name == json['source'],
+                orElse: () => PointSource.manual,
+              )
+            : null,
       );
 }
 
@@ -49,12 +65,13 @@ class WallFeature {
         'end': end.toJson(),
       };
 
-  factory WallFeature.fromJson(Map<String, dynamic> json) => WallFeature(
+  factory WallFeature.fromJson(Map json) => WallFeature(
         id: json['id'] as String,
         type: FeatureType.values.firstWhere(
-            (e) => e.name == json['type']),
-        start: ARPoint.fromJson(json['start'] as Map<String, dynamic>),
-        end: ARPoint.fromJson(json['end'] as Map<String, dynamic>),
+          (e) => e.name == json['type'],
+        ),
+        start: ARPoint.fromJson(json['start'] as Map),
+        end: ARPoint.fromJson(json['end'] as Map),
       );
 }
 
@@ -64,7 +81,7 @@ class RoomModel {
   final String name;
   final RoomType type;
   final List<ARPoint> points;
-  final List<WallFeature> features; // <-- NUEVO
+  final List<WallFeature> features;
   final bool isClosed;
 
   RoomModel({
@@ -103,7 +120,7 @@ class RoomModel {
         'isClosed': isClosed,
       };
 
-  factory RoomModel.fromJson(Map<String, dynamic> json) => RoomModel(
+  factory RoomModel.fromJson(Map json) => RoomModel(
         id: json['id'] as String,
         name: json['name'] as String,
         type: RoomType.values.firstWhere(
@@ -111,11 +128,11 @@ class RoomModel {
           orElse: () => RoomType.living,
         ),
         points: (json['points'] as List)
-            .map((p) => ARPoint.fromJson(p as Map<String, dynamic>))
+            .map((p) => ARPoint.fromJson(p as Map))
             .toList(),
         features: json['features'] != null
             ? (json['features'] as List)
-                .map((f) => WallFeature.fromJson(f as Map<String, dynamic>))
+                .map((f) => WallFeature.fromJson(f as Map))
                 .toList()
             : [],
         isClosed: json['isClosed'] as bool? ?? false,
