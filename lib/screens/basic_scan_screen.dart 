@@ -2,11 +2,14 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../models/room_model.dart';
 import '../providers/scanner_provider.dart';
 import '../providers/floor_plan_provider.dart';
 import '../scanner/engine/scanner_engine.dart';
 import '../scanner/engine/basic_scanner_adapter.dart';
 import 'floor_plan_viewer_screen.dart';
+
+enum AppMode { wall, door, window }
 
 class BasicScanScreen extends StatefulWidget {
   final ScannerEngine engine;
@@ -27,6 +30,7 @@ class BasicScanScreen extends StatefulWidget {
 class _BasicScanScreenState extends State<BasicScanScreen> {
   late final BasicScannerAdapter _adapter;
   final TextEditingController _distanceCtrl = TextEditingController(text: '2.5');
+  AppMode _currentMode = AppMode.wall;
 
   @override
   void initState() {
@@ -63,13 +67,39 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
     }
 
     final provider = context.read<ScannerProvider>();
-    final result = provider.tryAddPoint(point.x, point.y, point.z);
 
-    if (!result.isValid) {
+    if (_currentMode == AppMode.wall) {
+      final result = provider.tryAddPoint(point.x, point.y, point.z);
+      if (!result.isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage ?? 'Punto inválido.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } else {
+      if (provider.currentPointsCount < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Necesitas al menos 2 esquinas antes de agregar aberturas.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      final featureType = _currentMode == AppMode.door
+          ? FeatureType.door
+          : FeatureType.window;
+      provider.addFeatureToCurrentRoom(
+        featureType,
+        ARPoint(x: point.x, y: point.y, z: point.z),
+      );
+      final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.errorMessage ?? 'Punto inválido.'),
-          backgroundColor: Colors.redAccent,
+          content: Text('$label marcada en la posición actual'),
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -95,9 +125,40 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('¡Ambiente guardado!'), backgroundColor: Colors.green),
+      const SnackBar(
+        content: Text('¡Ambiente guardado!'),
+        backgroundColor: Colors.green,
+      ),
     );
     Navigator.pop(context);
+  }
+
+  Widget _buildModeChip(AppMode mode, IconData icon, String label) {
+    final isSelected = _currentMode == mode;
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: isSelected ? Colors.white : Colors.white70,
+      ),
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: mode == AppMode.wall
+          ? Colors.blueAccent
+          : mode == AppMode.door
+              ? Colors.redAccent
+              : Colors.blue.shade300,
+      backgroundColor: Colors.black87,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.white70,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (selected) {
+        if (!selected) return;
+        HapticFeedback.selectionClick();
+        setState(() => _currentMode = mode);
+      },
+    );
   }
 
   @override
@@ -109,15 +170,12 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Preview de cámara
           if (camera != null && camera.value.isInitialized)
             Positioned.fill(
               child: CameraPreview(camera),
             )
           else
             const Center(child: CircularProgressIndicator()),
-
-          // Retícula central
           Center(
             child: Container(
               width: 20,
@@ -128,8 +186,6 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
               ),
             ),
           ),
-
-          // HUD superior
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
@@ -156,8 +212,6 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
               ],
             ),
           ),
-
-          // Controles inferiores
           Positioned(
             bottom: 24,
             left: 16,
@@ -165,6 +219,45 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Selector de modo
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildModeChip(AppMode.wall, Icons.wallpaper, 'Pared'),
+                    const SizedBox(width: 8),
+                    _buildModeChip(AppMode.door, Icons.door_front_door, 'Puerta'),
+                    const SizedBox(width: 8),
+                    _buildModeChip(AppMode.window, Icons.window, 'Ventana'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Selector de tipo de habitación
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: RoomType.values.map((type) {
+                      final isSelected = provider.selectedType == type;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text(type.name.toUpperCase()),
+                          selected: isSelected,
+                          selectedColor: Colors.blueAccent,
+                          backgroundColor: Colors.black87,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          onSelected: (_) {
+                            HapticFeedback.selectionClick();
+                            provider.setRoomType(type);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
@@ -201,10 +294,26 @@ class _BasicScanScreenState extends State<BasicScanScreen> {
                       flex: 3,
                       child: ElevatedButton.icon(
                         onPressed: _onCapture,
-                        icon: const Icon(Icons.add_location_alt_outlined),
-                        label: const Text('CAPTURAR'),
+                        icon: Icon(
+                          _currentMode == AppMode.wall
+                              ? Icons.add_location_alt_outlined
+                              : _currentMode == AppMode.door
+                                  ? Icons.door_front_door
+                                  : Icons.window,
+                        ),
+                        label: Text(
+                          _currentMode == AppMode.wall
+                              ? 'AÑADIR ESQUINA'
+                              : _currentMode == AppMode.door
+                                  ? 'AÑADIR PUERTA'
+                                  : 'AÑADIR VENTANA',
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
+                          backgroundColor: _currentMode == AppMode.wall
+                              ? Colors.blueAccent
+                              : _currentMode == AppMode.door
+                                  ? Colors.redAccent
+                                  : Colors.blue.shade300,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
