@@ -66,11 +66,11 @@ class RoomScannerApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // Escucha reactivamente si el usuario está autenticado o no
-      home: StreamBuilder<AuthState>(
+      home: StreamBuilder(
         stream: _authService.authStateChanges,
         builder: (context, snapshot) {
           final session = _authService.currentUser;
-          
+
           if (session != null) {
             return const DashboardScreen();
           } else {
