@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ar_flutter_plugin_2/ar_flutter_plugin.dart';
 import 'package:ar_flutter_plugin_2/datatypes/config_planedetection.dart';
-import '../models/room_model.dart';
 import '../providers/scanner_provider.dart';
 import '../providers/floor_plan_provider.dart';
 import '../scanner/engine/scanner_engine.dart';
