@@ -67,7 +67,12 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
           : FeatureType.window;
       provider.addFeatureToCurrentRoom(
         featureType,
-        ARPoint(x: meterPos.dx * _adapter.scale, y: 0, z: meterPos.dy * _adapter.scale, source: PointSource.manual),
+        ARPoint(
+          x: meterPos.dx * _adapter.scale,
+          y: 0,
+          z: meterPos.dy * _adapter.scale,
+          source: PointSource.manual,
+        ),
       );
       HapticFeedback.lightImpact();
       final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
@@ -259,7 +264,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
                           min: 0.001,
                           max: 0.05,
                           divisions: 49,
-                          label: '${(_adapter.scale * 1000).toStringAsFixed(1)} mm/px',
+                          label: '${(_adapter.scale * 100).toStringAsFixed(1)} cm/px',
                           onChanged: (value) {
                             setState(() => _adapter.scale = value);
                           },
