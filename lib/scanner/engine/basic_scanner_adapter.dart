@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import '../../models/room_model.dart';
 import '../models/scanner_mode.dart';
 import '../models/scanner_point.dart';
 import 'scanner_adapter.dart';
@@ -77,7 +78,7 @@ class BasicScannerAdapter extends ScannerAdapter {
     if (_camera == null || !_camera!.value.isInitialized) return null;
 
     if (_lastPoint == null) {
-      const origin = ScannerPoint(
+      final origin = ScannerPoint(
         x: 0,
         y: 0,
         z: 0,
