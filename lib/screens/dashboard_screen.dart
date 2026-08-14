@@ -4,9 +4,11 @@ import '../models/isar_models.dart';
 import '../providers/project_provider.dart';
 import '../providers/floor_plan_provider.dart';
 import '../providers/scanner_provider.dart';
+import '../scanner/models/scanner_mode.dart';
+import '../services/scanner_capabilities_service.dart';
 import '../services/auth_service.dart';
 import '../services/ar_check_service.dart';
-import 'ar_scanner_screen.dart';
+import 'scan_screen.dart';
 import 'floor_plan_viewer_screen.dart';
 import 'login_screen.dart';
 
@@ -62,10 +64,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final uuid = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Crea el registro del proyecto en Isar (antes esto nunca se hacía: el
-    // diálogo "Nuevo Proyecto" descartaba el nombre y jamás llegaba a
-    // guardar nada, así que la lista de proyectos del dashboard nunca
-    // crecía después de escanear).
     await context.read<ProjectProvider>().saveCurrentProject(
           uuid: uuid,
           name: name,
@@ -74,13 +72,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (!mounted) return;
 
-    context.read<FloorPlanProvider>().loadProject(uuid: uuid, name: name, rooms: const []);
+    context.read<FloorPlanProvider>().loadProject(
+          uuid: uuid,
+          name: name,
+          rooms: const [],
+        );
     context.read<ScannerProvider>().loadRooms(const []);
 
-    await ArCheckService.abrirEscanerConValidacion(
-      context,
-      pantallaEscaneoAR: ARScannerScreen(projectUuid: uuid, projectName: name),
-    );
+    await _openScanner(context, uuid, name);
   }
 
   Future<void> _openProject(IsarProject project) async {
@@ -96,9 +95,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
     context.read<ScannerProvider>().loadRooms(rooms);
 
-    await ArCheckService.abrirEscanerConValidacion(
-      context,
-      pantallaEscaneoAR: ARScannerScreen(projectUuid: project.uuid, projectName: project.name),
+    await _openScanner(context, project.uuid, project.name);
+  }
+
+  Future<void> _openScanner(BuildContext ctx, String uuid, String name) async {
+    final caps = await ScannerCapabilitiesService.detect();
+
+    if (!ctx.mounted) return;
+
+    if (caps.supportsAR) {
+      // Dispositivo con AR: ir directo
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => ScanScreen(projectUuid: uuid, projectName: name),
+        ),
+      );
+      return;
+    }
+
+    // Sin AR: mostrar selector de modo
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Escáner no disponible',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Este dispositivo no soporta ARCore/ARKit. Selecciona una alternativa:',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 20),
+                if (caps.supportsBasic)
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt, color: Colors.blueAccent),
+                    title: const Text('Cámara + Sensores'),
+                    subtitle: const Text(
+                      'Usa el giroscopio. Debes ingresar la distancia a cada esquina.',
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => ScanScreen(
+                            projectUuid: uuid,
+                            projectName: name,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.greenAccent),
+                  title: const Text('Dibujo Manual 2D'),
+                  subtitle: const Text(
+                    'Crea el plano tocando la pantalla o ingresando medidas.',
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => ScanScreen(
+                          projectUuid: uuid,
+                          projectName: name,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -137,7 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis Proyectos AR'),
+        title: const Text('Mis Proyectos'),
         elevation: 2,
         actions: [
           IconButton(
@@ -149,7 +234,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
-          // Banner de estado de conexión / usuario
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             color: theme.colorScheme.surfaceContainerHighest,
@@ -173,7 +257,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          // Lista o estado vacío
           Expanded(
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
