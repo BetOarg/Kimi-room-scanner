@@ -14,10 +14,10 @@ import 'services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Inicializar Supabase
+  // Inicialización de Supabase con la nueva publishableKey
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabaseAnonKey,
+    anonKey: SupabaseConfig.supabasePublishableKey,
   );
 
   runApp(
@@ -25,10 +25,6 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ProjectProvider()),
         ChangeNotifierProvider(create: (_) => ScannerProvider()),
-        // FloorPlanProvider es el estado en memoria del proyecto abierto;
-        // se conecta aquí a ProjectProvider (Isar) como su única vía de
-        // persistencia durable, en vez de guardar por su cuenta en un
-        // archivo aparte como hacía antes.
         ChangeNotifierProxyProvider<ProjectProvider, FloorPlanProvider>(
           create: (_) => FloorPlanProvider(),
           update: (_, projectProvider, floorPlanProvider) {
@@ -65,12 +61,10 @@ class RoomScannerApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // Escucha reactivamente si el usuario está autenticado o no
       home: StreamBuilder(
         stream: _authService.authStateChanges,
         builder: (context, snapshot) {
           final session = _authService.currentUser;
-
           if (session != null) {
             return const DashboardScreen();
           } else {
