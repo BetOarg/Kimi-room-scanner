@@ -62,7 +62,7 @@ class BasicScannerAdapter extends ScannerAdapter {
     _calibrationDistance = meters;
   }
 
-  /// Resetea el yaw a cero (útil cuando el usuario se realinea físicamente).
+  /// Resetea el yaw a cero.
   void resetYaw() {
     _yaw = 0.0;
   }
