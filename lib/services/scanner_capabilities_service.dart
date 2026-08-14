@@ -8,37 +8,41 @@ import '../scanner/engine/scanner_capabilities.dart';
 class ScannerCapabilitiesService {
   static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
 
-  /// Detecta qué modos están disponibles en este dispositivo.
   static Future<ScannerCapabilities> detect() async {
     final cameraStatus = await Permission.camera.status;
-    final hasCamera = cameraStatus.isGranted || await Permission.camera.request().isGranted;
+    final hasCamera = cameraStatus.isGranted ||
+        await Permission.camera.request().isGranted;
 
     bool hasArCore = false;
     bool hasArKit = false;
 
     if (Platform.isAndroid) {
-      // Detección heurística: ARCore requiere Android 7.0+ (API 24)
-      // y ciertos hardware. Para producción, usar arcore_client o
-      // verificar via Google Play Services.
       final androidInfo = await _deviceInfo.androidInfo;
+      // Heurística: ARCore requiere Android 7.0+ (API 24).
+      // Detección real de instalación requiere platform channel.
       hasArCore = hasCamera && (androidInfo.version.sdkInt >= 24);
     } else if (Platform.isIOS) {
       final iosInfo = await _deviceInfo.iosInfo;
-      // ARKit desde iOS 11. Aproximamos por versión mayor.
       final versionParts = iosInfo.systemVersion.split('.');
       final major = int.tryParse(versionParts.first) ?? 0;
       hasArKit = hasCamera && major >= 11;
     }
 
-    // Sensores: solo verificamos si hay stream disponible
+    // Detección de sensores: escuchamos por 300 ms.
     bool hasGyro = false;
     bool hasAccel = false;
+
     try {
-      await gyroscopeEvents.first.timeout(const Duration(milliseconds: 500));
+      await gyroscopeEventStream()
+          .first
+          .timeout(const Duration(milliseconds: 300));
       hasGyro = true;
     } catch (_) {}
+
     try {
-      await accelerometerEvents.first.timeout(const Duration(milliseconds: 500));
+      await accelerometerEventStream()
+          .first
+          .timeout(const Duration(milliseconds: 300));
       hasAccel = true;
     } catch (_) {}
 
