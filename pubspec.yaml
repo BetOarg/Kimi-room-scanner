@@ -1,7 +1,7 @@
 name: room_scanner_ar
 description: "Aplicación de escaneo de habitaciones en Realidad Aumentada y generación de planos 2D."
 publish_to: 'none'
-version: 2.6.0+2
+version: 2.7.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -14,12 +14,15 @@ dependencies:
   # ── AR (ARCore / ARKit) ──
   ar_flutter_plugin_2: ^0.0.3
 
-  # ── NUEVAS: Modo Basic (cámara + sensores) ──
+  # ── Modo Basic (cámara + sensores) ──
   camera: ^0.10.5+9
   sensors_plus: ^4.0.2
 
-  # ── NUEVA: Detección runtime de hardware ──
+  # ── Detección runtime de hardware ──
   device_info_plus: ^9.1.2
+
+  # ── NUEVA: Persistencia de preferencias ──
+  shared_preferences: ^2.2.2
 
   # ── Matemáticas vectoriales ──
   vector_math: ^2.1.4
