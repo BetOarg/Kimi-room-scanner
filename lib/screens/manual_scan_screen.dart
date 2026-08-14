@@ -52,7 +52,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
       final point = _adapter.addAbsolutePoint(meterPos.dx, meterPos.dy);
       setState(() => _canvasPoints.add(local));
       HapticFeedback.lightImpact();
-      provider.tryAddPoint(point.x, point.y, point.z);
+      provider.tryAddPoint(point);
     } else {
       if (provider.currentPointsCount < 2) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +68,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
           : FeatureType.window;
       provider.addFeatureToCurrentRoom(
         featureType,
-        ARPoint(x: meterPos.dx, y: 0, z: meterPos.dy),
+        ARPoint(x: meterPos.dx, y: 0, z: meterPos.dy, source: PointSource.manual),
       );
       HapticFeedback.lightImpact();
       final label = _currentMode == AppMode.door ? 'Puerta' : 'Ventana';
@@ -92,7 +92,7 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
     HapticFeedback.lightImpact();
 
     final provider = context.read<ScannerProvider>();
-    provider.tryAddPoint(point.x, point.y, point.z);
+    provider.tryAddPoint(point);
 
     _distanceCtrl.clear();
     _angleCtrl.clear();
@@ -210,7 +210,6 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
               ),
               child: Column(
                 children: [
-                  // Selector de modo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -222,7 +221,6 @@ class _ManualScanScreenState extends State<ManualScanScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Selector de tipo de habitación
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
