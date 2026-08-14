@@ -1,7 +1,7 @@
 name: room_scanner_ar
 description: "Aplicación de escaneo de habitaciones en Realidad Aumentada y generación de planos 2D."
 publish_to: 'none'
-version: 2.5.0+1
+version: 2.6.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -11,32 +11,39 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Módulo AR
+  # ── AR (ARCore / ARKit) ──
   ar_flutter_plugin_2: ^0.0.3
 
-  # Matemáticas vectoriales para los nodos 3D
+  # ── NUEVAS: Modo Basic (cámara + sensores) ──
+  camera: ^0.10.5+9
+  sensors_plus: ^4.0.2
+
+  # ── NUEVA: Detección runtime de hardware ──
+  device_info_plus: ^9.1.2
+
+  # ── Matemáticas vectoriales ──
   vector_math: ^2.1.4
 
-  # Gestión de estado
+  # ── Gestión de estado ──
   provider: ^6.1.2
 
-  # Selector de archivos (Importación JSON)
+  # ── Selector de archivos (Importación JSON) ──
   file_picker: ^8.0.0
 
-  # Generación, impresión y exportación de Planos PDF
+  # ── Generación, impresión y exportación PDF ──
   pdf: ^3.10.8
   printing: ^5.13.1
   share_plus: ^10.0.0
   path_provider: ^2.1.2
 
-  # Base de Datos Local NoSQL (Fase 1 - Persistencia)
+  # ── Base de datos local (Isar) ──
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
 
-  # Nube, Autenticación y Sincronización (Fase 2)
+  # ── Nube, autenticación y sincronización ──
   supabase_flutter: ^2.3.4
 
-  # Permisos (cámara/ubicación en tiempo de ejecución)
+  # ── Permisos en tiempo de ejecución ──
   permission_handler: ^11.3.1
 
 dev_dependencies:
@@ -54,6 +61,5 @@ flutter:
   uses-material-design: true
 
   assets:
-    # Modelos e imágenes en assets/models/
     - assets/models/sphere.gltf
     - assets/models/images.png
